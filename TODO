@@ -1,0 +1,2 @@
+Solve stack corruption detected by Visual Studio.
+Don't show layer break when disc only has 1 layer.
