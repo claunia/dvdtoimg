@@ -149,3 +149,8 @@ $RECYCLE.BIN/
 
 # Mac crap
 .DS_Store
+.AppleDouble
+
+# GCC files
+dvdtoimg
+*.o

@@ -1,4 +1,1 @@
-dvdtoimg
-========
-
-DVD disc dumper
+readme.txt

@@ -1,0 +1,3 @@
+[submodule "libcdio"]
+	path = libcdio
+	url = git://github.com/claunia/libcdio-osx
