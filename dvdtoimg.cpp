@@ -1061,7 +1061,7 @@ bool read_dvd_to_image(char *drive_letter, char *file_pathname, unsigned long in
                                 }
 
                                 LBA_i2=LBA_i+n_sectors_to_read-1;
-								printf("%c[1000DReading sector %lu to %lu (total: %lu, progress: %.1f%%)", 0x1B, 0x1B, LBA_i, LBA_i2, n_sectors, (double)LBA_i2/n_sectors*100);
+								printf("\rReading sector %lu to %lu (total: %lu, progress: %.1f%%)", LBA_i, LBA_i2, n_sectors, (double)LBA_i2/n_sectors*100);
                                 if(read_12(p_cdio, LBA_i, n_sectors_to_read)==DRIVER_OP_SUCCESS)
                                 {
                                     if(success==DRIVER_OP_SUCCESS)
