@@ -1,11 +1,27 @@
 /*
-DVDtoIMG v1.00.
-21 Oct 2013.
+DVDtoIMG v1.10.
+22 Oct 2013.
 Written by Natalia Portillo <natalia@claunia.com>
 Based on Truman's CDtoIMG
+Thanks to V for help with CRC32.
 
 Reads an entire DVD, dumping the Physical Format Information, Copyright Management Information,
 Disc Manufacturing Information and Burst Cutting Area.
+*/
+
+/*
+  This is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 2 of the License, or
+  (at your option) any later version.
+
+  This is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this software.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include <stdio.h>
@@ -18,8 +34,33 @@ Disc Manufacturing Information and Burst Cutting Area.
 #include <string.h> // For memset()
 #include <stdlib.h> // For atoi()
 
+#include "crc32.h"
+#include "md5.h"
+#include "sha1.h"
+
 //Global variables..
 unsigned char *data_buf;  //Buffer for holding transfer data from or to drive.
+uint32_t crc;
+MD5_CTX md5context;
+SHA1_CTX sha1context;
+unsigned char md5digest[MD5_DIGEST_LENGTH];
+unsigned char sha1digest[SHA1_DIGEST_LENGTH];
+char md5hash[(MD5_DIGEST_LENGTH * 2) + 1];
+char sha1hash[(SHA1_DIGEST_LENGTH * 2) + 1];
+
+int digesttostr(char *hash, const unsigned char *digest, size_t length) {
+  unsigned int i;
+
+  for (i = 0; i < length; i++) {
+    hash[(i * 2)] = ((digest[i] & 0xf0) >> 4) + '0';
+    if (hash[(i * 2)] > '9') hash[(i * 2)] += ('a' - '9' - 1);
+    hash[(i * 2) + 1] = (digest[i]  & 0x0f) + '0';
+    if (hash[(i * 2) + 1] > '9') hash[(i * 2) + 1] += ('a' - '9' - 1);
+  }
+
+  hash[length * 2] = 0;
+  return length;
+}
 
 // Opens device using libcdio
 CdIo_t *open_volume(char *drive_letter)
@@ -358,6 +399,25 @@ driver_return_code_t verified_read_PFI_layer(CdIo_t *p_cdio,
             file_ptr=fopen(pfi_name, "wb");
             fwrite(pfi_buf, alloc_len, 1, file_ptr);
             fclose(file_ptr);
+            
+            crc=0xFFFFFFFF;
+			MD5_Init(&md5context);
+			SHA1_Init(&sha1context);
+
+			crc = update_crc32(crc, pfi_buf, alloc_len);
+			MD5_Update(&md5context, pfi_buf, alloc_len);
+			SHA1_Update(&sha1context, pfi_buf, alloc_len);
+
+			MD5_Final(md5digest, &md5context);
+			SHA1_Final(sha1digest, &sha1context);
+			crc ^= 0xFFFFFFFF;
+
+			digesttostr(md5hash, md5digest, MD5_DIGEST_LENGTH);
+			digesttostr(sha1hash, sha1digest, SHA1_DIGEST_LENGTH);
+
+			printf("CRC32: %08x\n", (unsigned int)crc);
+			printf("MD5:   %s\n", md5hash);
+			printf("SHA1:  %s\n", sha1hash);
         }
         else
         {
@@ -431,6 +491,25 @@ driver_return_code_t verified_read_BCA(CdIo_t *p_cdio,
        		file_ptr=fopen("BCA.BIN", "wb");
        		fwrite(bca_buf, alloc_len, 1, file_ptr);
        		fclose(file_ptr);
+            
+            crc=0xFFFFFFFF;
+			MD5_Init(&md5context);
+			SHA1_Init(&sha1context);
+
+			crc = update_crc32(crc, bca_buf, alloc_len);
+			MD5_Update(&md5context, bca_buf, alloc_len);
+			SHA1_Update(&sha1context, bca_buf, alloc_len);
+
+			MD5_Final(md5digest, &md5context);
+			SHA1_Final(sha1digest, &sha1context);
+			crc ^= 0xFFFFFFFF;
+
+			digesttostr(md5hash, md5digest, MD5_DIGEST_LENGTH);
+			digesttostr(sha1hash, sha1digest, SHA1_DIGEST_LENGTH);
+
+			printf("CRC32: %08x\n", (unsigned int)crc);
+			printf("MD5:   %s\n", md5hash);
+			printf("SHA1:  %s\n", sha1hash);
         }
         else
         {
@@ -570,6 +649,25 @@ driver_return_code_t verified_read_PFI(CdIo_t *p_cdio,
             	file_ptr=fopen("PFI.BIN", "wb");
             	fwrite(pfi_buf, alloc_len, 1, file_ptr);
             	fclose(file_ptr);
+            
+	            crc=0xFFFFFFFF;
+				MD5_Init(&md5context);
+				SHA1_Init(&sha1context);
+
+				crc = update_crc32(crc, pfi_buf, alloc_len);
+				MD5_Update(&md5context, pfi_buf, alloc_len);
+				SHA1_Update(&sha1context, pfi_buf, alloc_len);
+
+				MD5_Final(md5digest, &md5context);
+				SHA1_Final(sha1digest, &sha1context);
+				crc ^= 0xFFFFFFFF;
+
+				digesttostr(md5hash, md5digest, MD5_DIGEST_LENGTH);
+				digesttostr(sha1hash, sha1digest, SHA1_DIGEST_LENGTH);
+
+				printf("CRC32: %08x\n", (unsigned int)crc);
+				printf("MD5:   %s\n", md5hash);
+				printf("SHA1:  %s\n", sha1hash);
             }
             
             has_bca=(pfi_buf[16]&0x80)>>7;
@@ -653,6 +751,25 @@ driver_return_code_t verified_read_CMI(CdIo_t *p_cdio,
        		file_ptr=fopen("CMI.BIN", "wb");
        		fwrite(cmi_buf, alloc_len, 1, file_ptr);
        		fclose(file_ptr);
+            
+            crc=0xFFFFFFFF;
+			MD5_Init(&md5context);
+			SHA1_Init(&sha1context);
+
+			crc = update_crc32(crc, cmi_buf, alloc_len);
+			MD5_Update(&md5context, cmi_buf, alloc_len);
+			SHA1_Update(&sha1context, cmi_buf, alloc_len);
+
+			MD5_Final(md5digest, &md5context);
+			SHA1_Final(sha1digest, &sha1context);
+			crc ^= 0xFFFFFFFF;
+
+			digesttostr(md5hash, md5digest, MD5_DIGEST_LENGTH);
+			digesttostr(sha1hash, sha1digest, SHA1_DIGEST_LENGTH);
+
+			printf("CRC32: %08x\n", (unsigned int)crc);
+			printf("MD5:   %s\n", md5hash);
+			printf("SHA1:  %s\n", sha1hash);
         }
         else
         {
@@ -726,6 +843,25 @@ driver_return_code_t verified_read_DMI(CdIo_t *p_cdio,
        		file_ptr=fopen("DMI.BIN", "wb");
        		fwrite(dmi_buf, alloc_len, 1, file_ptr);
        		fclose(file_ptr);
+            
+            crc=0xFFFFFFFF;
+			MD5_Init(&md5context);
+			SHA1_Init(&sha1context);
+
+			crc = update_crc32(crc, dmi_buf, alloc_len);
+			MD5_Update(&md5context, dmi_buf, alloc_len);
+			SHA1_Update(&sha1context, dmi_buf, alloc_len);
+
+			MD5_Final(md5digest, &md5context);
+			SHA1_Final(sha1digest, &sha1context);
+			crc ^= 0xFFFFFFFF;
+
+			digesttostr(md5hash, md5digest, MD5_DIGEST_LENGTH);
+			digesttostr(sha1hash, sha1digest, SHA1_DIGEST_LENGTH);
+
+			printf("CRC32: %08x\n", (unsigned int)crc);
+			printf("MD5:   %s\n", md5hash);
+			printf("SHA1:  %s\n", sha1hash);
         }
         else
         {
@@ -910,6 +1046,11 @@ bool read_dvd_to_image(char *drive_letter, char *file_pathname, unsigned long in
                         {
                             n_sectors_to_read=data_buffer_size / 2048;  //Block size: E.g.: 65536 / 2048 = 32.
                             LBA_i=0;  //Starting LBA address.
+                            
+                            crc=0xFFFFFFFF;
+                            MD5_Init(&md5context);
+							SHA1_Init(&sha1context);
+                            
                             while(LBA_i<n_sectors)
                             {
                                 //Check if block size is suitable for the remaining sectors.
@@ -920,11 +1061,15 @@ bool read_dvd_to_image(char *drive_letter, char *file_pathname, unsigned long in
                                 }
 
                                 LBA_i2=LBA_i+n_sectors_to_read-1;
-                                printf("Reading sector %lu to %lu (total: %lu, progress: %.1f%%)\n", LBA_i, LBA_i2, n_sectors, (double)LBA_i2/n_sectors*100);
+								printf("%c[1000DReading sector %lu to %lu (total: %lu, progress: %.1f%%)", 0x1B, 0x1B, LBA_i, LBA_i2, n_sectors, (double)LBA_i2/n_sectors*100);
                                 if(read_12(p_cdio, LBA_i, n_sectors_to_read)==DRIVER_OP_SUCCESS)
                                 {
                                     if(success==DRIVER_OP_SUCCESS)
                                     {
+                                    	crc = update_crc32(crc, data_buf, 2048*n_sectors_to_read);
+                                    	MD5_Update(&md5context, data_buf, 2048*n_sectors_to_read);
+  										SHA1_Update(&sha1context, data_buf, 2048*n_sectors_to_read);
+  
                                         fwrite(data_buf, 2048*n_sectors_to_read, 1, file_ptr);
                                         if(ferror(file_ptr))
                                         {
@@ -966,6 +1111,18 @@ bool read_dvd_to_image(char *drive_letter, char *file_pathname, unsigned long in
 
                                 LBA_i=LBA_i+n_sectors_to_read;
                             }
+                            
+						    MD5_Final(md5digest, &md5context);
+						    SHA1_Final(sha1digest, &sha1context);
+							crc ^= 0xFFFFFFFF;
+
+						    digesttostr(md5hash, md5digest, MD5_DIGEST_LENGTH);
+						    digesttostr(sha1hash, sha1digest, SHA1_DIGEST_LENGTH);
+
+						    printf("CRC32: %08x\n", (unsigned int)crc);
+						    printf("MD5:   %s\n", md5hash);
+						    printf("SHA1:  %s\n", sha1hash);
+
 
                             fclose(file_ptr);
                             cmd_ret=true;
@@ -1010,7 +1167,7 @@ bool read_dvd_to_image(char *drive_letter, char *file_pathname, unsigned long in
 
 void usage()
 {
-    printf("DVDtoIMG v1.0. 21 Oct 2013.\n");
+    printf("DVDtoIMG v1.1. 22 Oct 2013.\n");
     printf("Usage: cdtoimg <drive path> <output file>\n");
     return ;  //Exit program here.
 }
