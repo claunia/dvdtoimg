@@ -29,5 +29,8 @@ cdtoimg <drive path> <outputfile>
 
 History
 -------
+v1.1 - 22 Oct 2013
+- Calculates checksums
+
 v1.0 - 21 Oct 2013
 - First release.
